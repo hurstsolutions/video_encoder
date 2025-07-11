@@ -1,8 +1,12 @@
+#define _USE_MATH_DEFINES
+
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <vector>
+#include <iomanip>
 #include <algorithm>
+#include <cmath>
 
 struct Image {
     int width;
@@ -18,6 +22,11 @@ struct YCbCrImage{
     std::vector<unsigned char> cr_data;
 };
 
+struct Block{
+    std::vector<double> data;
+    Block() : data(64, 0.0){}
+};
+
 YCbCrImage rgb_to_ycbcr(const Image& rgb_img){
     YCbCrImage ycbcr_img;
     ycbcr_img.width = rgb_img.width;
@@ -29,7 +38,7 @@ YCbCrImage rgb_to_ycbcr(const Image& rgb_img){
     ycbcr_img.cr_data.reserve(num_pixels);
 
     for (size_t i=0; i < num_pixels; ++i){
-        std::cout << "i = " << i << std::endl;
+       // std::cout << "i = " << i << std::endl;
         double r = rgb_img.data[i * 3 + 0];
         double g = rgb_img.data[i * 3 + 1];
         double b = rgb_img.data[i * 3 + 2];
@@ -39,8 +48,8 @@ YCbCrImage rgb_to_ycbcr(const Image& rgb_img){
         double cb = -0.168736 * r - 0.331264 * g + 0.5 * b + 128;
         double cr = 0.5 * r - 0.418688 * g - 0.081312 * b + 128;
 
-        std::cout << "<R G B> <" << r << " " << g << " " << b << ">" << std::endl;
-        std::cout << "<Y Cb Cr> <" << y << " " << cb << " " << cr << ">" << std::endl; 
+        //std::cout << "<R G B> <" << r << " " << g << " " << b << ">" << std::endl;
+        //std::cout << "<Y Cb Cr> <" << y << " " << cb << " " << cr << ">" << std::endl; 
 
         ycbcr_img.y_data[i] = static_cast<unsigned char>(std::max(0.0, std::min(255.0, y)));
         ycbcr_img.cb_data[i] = static_cast<unsigned char>(std::max(0.0, std::min(255.0, cb)));
@@ -87,6 +96,37 @@ Image read_ppm(const std::string& filename){
     return img;
 }
 
+void perform_dct(Block& block){
+    const int N = 8;
+    std::vector<double> temp(64);
+    //store the row results in this temp vector and then store the column results from the temp v
+    //vector into the original block. Transforms the original block.
+
+    // 1D DCT on rows
+    for (int i = 0; i < N; ++i){ // Process each row
+        for (int j = 0; j < N; ++j){ //j is the frequency coefficient
+            double sum = 0.0;
+            for (int k = 0; k < N; ++k){ // Process each pixel
+                sum += block.data[i * N + k] * cos((2*k+1) * j * M_PI / (2.0 * N));
+            }
+            double c = (j==0) ? sqrt(1.0/N) : sqrt(2.0/N);
+            temp[i*N+j] = c * sum;
+        }
+    }
+
+    // 1D DCT on columns
+    for (int j = 0; j < N; ++j){
+        for (int i = 0; i< N; ++i){
+            double sum = 0.0;
+            for (int k = 0; k < N; ++k){
+                sum += temp[k*N+j] * cos((2*k+1) * i * M_PI / (2.0*N));
+            }
+            double c = (i==0) ? sqrt(1.0/N) : sqrt(2.0 / N);
+            block.data[i * N + j] = c * sum;
+        }
+    }
+}
+
 
 int main(){
     const std::string input_filename = "input2.ppm";
@@ -99,5 +139,52 @@ int main(){
     std::cout << "Successfully converted RGB to YCbCr" << std::endl;
 
     std::cout << "Size of Luma (y) data: " << ycbcr_image.y_data.size() << " bytes." << std::endl;
+    
+    
+    const int block_size = 8;
+    int width_in_blocks = ycbcr_image.width / block_size;
+    int height_in_blocks = ycbcr_image.height / block_size;
+
+    std::vector<Block> y_dct_blocks;
+
+    std::cout << "Processing Y Plane..." << std::endl;
+
+    // Visit each block
+    for(int by = 0; by < height_in_blocks; ++by){
+        for (int bx = 0; bx < height_in_blocks; ++bx){
+            Block current_block;
+
+            // Visit each pixel in each block
+            for(int y = 0; y < block_size; ++y){
+                for (int x = 0; x < block_size; ++x){
+                    int pixel_x = bx * block_size + x;
+                    int pixel_y = by * block_size + y;
+                    int pixel_index = pixel_y * ycbcr_image.width + pixel_x;
+
+                    current_block.data[y*block_size+x] = static_cast<double>(ycbcr_image.y_data[pixel_index]) - 128.0;
+                }
+            }
+
+            perform_dct(current_block);
+
+            y_dct_blocks.push_back(current_block);
+        }
+    }
+
+    std::cout << "Finished DCT for " << y_dct_blocks.size() << " Y Blocks." << std::endl;
+
+    if(!y_dct_blocks.empty()){
+        std::cout << "First 8x8 Y DCT blocks (top-left is DC coeff):" << std::endl;
+        for(int y = 0; y < block_size; ++y){
+            for(int x = 0; x < block_size; ++x){
+                std::cout << std::fixed << std::setprecision(1) << std::setw(8) << y_dct_blocks[0].data[y * block_size + x];
+            }
+            std::cout << std::endl;
+        }
+    } else{
+        std::cout << "No blocks found." << std::endl;
+    }
+    
+    
     return 0;
 }
