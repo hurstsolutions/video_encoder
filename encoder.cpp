@@ -27,6 +27,17 @@ struct Block{
     Block() : data(64, 0.0){}
 };
 
+static const int LUMINANCE_QUANT_TABLE[64] = {
+    16, 11, 10, 16, 24, 40, 51, 61,
+    12, 12, 14, 19, 26, 58, 60, 55,
+    14, 13, 16, 24, 40, 57, 69, 56,
+    14, 17, 22, 29, 51, 87, 80, 62,
+    18, 22, 37, 56, 68, 109, 103, 77,
+    24, 35, 55, 64, 81, 104, 113, 92,
+    49, 64, 78, 87, 103, 121, 120, 101,
+    72, 92, 95, 98, 112, 100, 103, 99
+};
+
 YCbCrImage rgb_to_ycbcr(const Image& rgb_img){
     YCbCrImage ycbcr_img;
     ycbcr_img.width = rgb_img.width;
@@ -127,6 +138,15 @@ void perform_dct(Block& block){
     }
 }
 
+void quantize_block(Block& block){
+    const int block_size = block.data.size();
+    double new_value;
+    for (int i = 0; i < block_size; ++i){
+        new_value = round(block.data[i] / LUMINANCE_QUANT_TABLE[i]);
+        block.data[i] = new_value;
+    }
+}
+
 
 int main(){
     const std::string input_filename = "input2.ppm";
@@ -166,18 +186,18 @@ int main(){
             }
 
             perform_dct(current_block);
-
+            quantize_block(current_block);
             y_dct_blocks.push_back(current_block);
         }
     }
 
-    std::cout << "Finished DCT for " << y_dct_blocks.size() << " Y Blocks." << std::endl;
+    std::cout << "Finished DCT and Quantization for " << y_dct_blocks.size() << " Y Blocks." << std::endl;
 
     if(!y_dct_blocks.empty()){
-        std::cout << "First 8x8 Y DCT blocks (top-left is DC coeff):" << std::endl;
+        std::cout << "First 8x8 Y DCT blocks - Quantized:" << std::endl;
         for(int y = 0; y < block_size; ++y){
             for(int x = 0; x < block_size; ++x){
-                std::cout << std::fixed << std::setprecision(1) << std::setw(8) << y_dct_blocks[0].data[y * block_size + x];
+                std::cout << std::setw(8) << static_cast<int>(y_dct_blocks[0].data[y * block_size + x]);
             }
             std::cout << std::endl;
         }
