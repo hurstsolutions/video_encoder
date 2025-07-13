@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <cmath>
 
+static const int BLOCK_MATRIX_SIZE = 64;
+
 struct Image {
     int width;
     int height;
@@ -24,10 +26,10 @@ struct YCbCrImage{
 
 struct Block{
     std::vector<double> data;
-    Block() : data(64, 0.0){}
+    Block() : data(BLOCK_MATRIX_SIZE, 0.0){}
 };
 
-static const int LUMINANCE_QUANT_TABLE[64] = {
+static const int LUMINANCE_QUANT_TABLE[BLOCK_MATRIX_SIZE] = {
     16, 11, 10, 16, 24, 40, 51, 61,
     12, 12, 14, 19, 26, 58, 60, 55,
     14, 13, 16, 24, 40, 57, 69, 56,
@@ -37,6 +39,19 @@ static const int LUMINANCE_QUANT_TABLE[64] = {
     49, 64, 78, 87, 103, 121, 120, 101,
     72, 92, 95, 98, 112, 100, 103, 99
 };
+
+static const int ZIG_ZAG_INDEX_ORDER[BLOCK_MATRIX_SIZE]{
+    0, 1, 5, 6, 14, 15, 27, 28,
+    2, 4, 7, 13, 16, 26, 29, 42,
+    3, 8, 12, 17, 25, 30, 41, 43,
+    9, 11, 18, 24, 31, 40, 44, 53,
+    10, 19, 23, 32, 39, 45, 52, 54,
+    20, 22, 33, 38, 46, 51, 55, 60,
+    21, 34, 37, 47, 50, 56, 59, 61,
+    35, 36, 48, 49, 57, 58, 62, 63
+};
+
+
 
 YCbCrImage rgb_to_ycbcr(const Image& rgb_img){
     YCbCrImage ycbcr_img;
@@ -109,7 +124,7 @@ Image read_ppm(const std::string& filename){
 
 void perform_dct(Block& block){
     const int N = 8;
-    std::vector<double> temp(64);
+    std::vector<double> temp(BLOCK_MATRIX_SIZE);
     //store the row results in this temp vector and then store the column results from the temp v
     //vector into the original block. Transforms the original block.
 
@@ -139,12 +154,19 @@ void perform_dct(Block& block){
 }
 
 void quantize_block(Block& block){
-    const int block_size = block.data.size();
     double new_value;
-    for (int i = 0; i < block_size; ++i){
+    for (int i = 0; i < BLOCK_MATRIX_SIZE; ++i){
         new_value = round(block.data[i] / LUMINANCE_QUANT_TABLE[i]);
         block.data[i] = new_value;
     }
+}
+
+std::vector<double> zig_zag_scan(Block& block){
+    std::vector<double> scanned_vector(BLOCK_MATRIX_SIZE);
+    for (int i = 0; i < BLOCK_MATRIX_SIZE; ++i){
+        scanned_vector[i] = block.data[ZIG_ZAG_INDEX_ORDER[i]];
+    }
+    return scanned_vector;
 }
 
 
@@ -204,7 +226,31 @@ int main(){
     } else{
         std::cout << "No blocks found." << std::endl;
     }
-    
+
+    //Collect all the Zig Zag Scan data into one vector
+    std::vector<short> all_zig_zag_scans;
+    std::vector<double> scan;
+    const int y_dct_blocks_size = y_dct_blocks.size();
+    for(int i = 0; i < y_dct_blocks_size; ++i){
+        scan = zig_zag_scan(y_dct_blocks[i]);
+        for (double coeff : scan){
+            all_zig_zag_scans.push_back(static_cast<short>(coeff));
+        }
+    }
+
+    std::ofstream output_file("output.bin", std::ios::binary);
+    if (!output_file.is_open()){
+        std::cerr << "Error could not open output file " << std::endl;
+        exit(1);
+    }
+    output_file.write(reinterpret_cast<char*>(&ycbcr_image.width), sizeof(ycbcr_image.width));
+    output_file.write(reinterpret_cast<char*>(&ycbcr_image.height), sizeof(ycbcr_image.height));
+    output_file.write(reinterpret_cast<char*>(all_zig_zag_scans.data()), all_zig_zag_scans.size()*sizeof(short));
+
+    output_file.close();
+
+    std::cout << "Successfully wrote compressed data." << std::endl;
+    std::cout << "File size: " << sizeof(ycbcr_image.width) + sizeof(ycbcr_image.height) + all_zig_zag_scans.size() * sizeof(short) << " bytes. " << std::endl;
     
     return 0;
 }
