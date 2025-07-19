@@ -1,0 +1,11 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build-decoder",
+      "type": "shell",
+      "command": ".\\build-decoder.bat",
+      "problemMatcher": "$msCompile"
+    }
+  ]
+}

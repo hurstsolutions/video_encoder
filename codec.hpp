@@ -9,6 +9,12 @@ struct Image {
     std::vector<unsigned char> data;
 };
 
+struct EncodedImage {
+    int width;
+    int height;
+    std::vector<short> data;
+};
+
 struct YCbCrImage{
     int width;
     int height;
