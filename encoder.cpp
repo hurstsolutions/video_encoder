@@ -77,6 +77,7 @@ Image read_ppm(const std::string& filename){
         std::cerr << "Error - failed to read pixel data from " << filename << std::endl;
         exit(1);
     }
+    file.close();
 
     return img;
 }
@@ -123,7 +124,7 @@ void quantize_block(Block& block){
 std::vector<double> zig_zag_scan(Block& block){
     std::vector<double> scanned_vector(BLOCK_MATRIX_SIZE);
     for (int i = 0; i < BLOCK_MATRIX_SIZE; ++i){
-        scanned_vector[i] = block.data[ZIG_ZAG_INDEX_ORDER[i]];
+        scanned_vector[ZIG_ZAG_INDEX_ORDER[i]] = block.data[i];
     }
     return scanned_vector;
 }
