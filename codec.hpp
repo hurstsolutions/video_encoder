@@ -1,7 +1,12 @@
 #pragma once
+#define _USE_MATH_DEFINES
+
 #include <vector>
+#include <array>
+#include <cmath>
 
 constexpr int BLOCK_MATRIX_SIZE = 64;
+constexpr int DCT_N = 8;
 
 struct Image {
     int width;
@@ -30,3 +35,6 @@ struct Block{
 
 extern const int LUMINANCE_QUANT_TABLE[BLOCK_MATRIX_SIZE];
 extern const int ZIG_ZAG_INDEX_ORDER[BLOCK_MATRIX_SIZE];
+
+extern const std::array<double, 8> NORMALIZATION_FACTORS;
+extern const std::array<std::array<double, 8>, 8> COSINE_TABLE;

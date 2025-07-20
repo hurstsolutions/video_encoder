@@ -1,8 +1,11 @@
+#define _USE_MATH_DEFINES
+
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <vector>
 #include <iomanip>
+#include <algorithm>
 
 #include "codec.hpp"
 
@@ -50,9 +53,9 @@ std::vector<Block> inverse_zig_zag(const std::vector<short>& zz_data){
         Block new_block;
         size_t block_start = b * BLOCK_MATRIX_SIZE;
         for (int j = 0; j < BLOCK_MATRIX_SIZE; ++j){
-            int coeff = zz_data[block_start + ZIG_ZAG_INDEX_ORDER[j]];
+            int coeff = zz_data[block_start + j];
             int destination = ZIG_ZAG_INDEX_ORDER[j];
-            new_block.data[j] = static_cast<double>(coeff);
+            new_block.data[destination] = static_cast<double>(coeff);
         }
 
         all_blocks.push_back(std::move(new_block));
@@ -66,6 +69,41 @@ void dequantize_block(Block& block){
     }
 }
 
+void inverse_dct(Block& block){
+    double temp[64];
+    //Column Pass
+    for(int col = 0; col < DCT_N ; ++col){
+        for(int x = 0; x < DCT_N; ++x){
+            double sum = 0.0;
+            for(int u = 0; u < DCT_N; ++u){
+                sum += NORMALIZATION_FACTORS[u] * block.data[u*DCT_N+col] * COSINE_TABLE[u][x];
+            }
+            temp[x*DCT_N+col] = sum;
+        }
+    }
+    //Row Pass
+    for (int row = 0; row < DCT_N; ++row){
+        for(int y = 0; y < DCT_N; ++y){
+            double sum = 0.0;
+            for(int v = 0; v < DCT_N; ++v){
+                sum += NORMALIZATION_FACTORS[v] * temp[row*DCT_N+v] * COSINE_TABLE[v][y];
+            }
+            block.data[row*DCT_N+y] = sum;
+        }
+    }
+}
+
+void write_ppm(const std::string& filename, int width, int height, const std::vector<unsigned char>& data){
+    std::ofstream output_file(filename, std::ios::binary);
+    if(!output_file.is_open()){
+        std::cerr << "Error could not open output file. " << std::endl;
+        exit(1);
+    }
+    output_file << "P6\n" << width << " " << height << "\n255\n";
+    output_file.write(reinterpret_cast<const char*>(data.data()), data.size());
+    std::cout << "Successfully wrote to " << filename << std::endl;
+    output_file.close();
+}
 
 int main(){
     const std::string output_filename = "output.bin";
@@ -98,6 +136,39 @@ int main(){
 
     std::cout << "De-Quantized " << inversed_blocks.size() << " blocks" << std::endl;
 
+    // Inverse DCT and Shift/Clamp values
+    Image final_image;
+    final_image.width = encoded_width;
+    final_image.height = encoded_height;
+    final_image.data.resize(encoded_width * encoded_height * 3);
+    int width_in_blocks = encoded_width/ block_size;
+    for(size_t i = 0; i < inversed_blocks.size(); ++i){ // Go through each block
+        int block_y = i / width_in_blocks;
+        int block_x = i % width_in_blocks;
+        Block& current_block = inversed_blocks[i];
 
-    return 1;
+        inverse_dct(current_block);
+
+        for(int y=0; y < block_size; ++y){ // Go through each pixel in each block
+            for (int x=0; x < block_size; ++x){
+                int pixel_x = block_x * block_size + x;
+                int pixel_y = block_y * block_size + y;
+
+                double val = current_block.data[y * block_size + x] + 128.0;
+                unsigned char clamped_val = static_cast<unsigned char>(std::clamp(val, 0.0, 255.0));
+
+                //Flip 180 and then fill the final image.
+                int rot_x = (encoded_width - 1) - pixel_x;
+                int rot_y = (encoded_height -1) - pixel_y;
+                size_t final_index = (rot_y * encoded_width + rot_x) * 3;
+                final_image.data[final_index + 0] = clamped_val;
+                final_image.data[final_index + 1] = clamped_val;
+                final_image.data[final_index + 2] = clamped_val;
+            }
+        }
+    }
+
+    write_ppm("output.ppm", encoded_width, encoded_height, final_image.data);
+
+    return 0;
 }

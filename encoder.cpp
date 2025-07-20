@@ -20,7 +20,7 @@ YCbCrImage rgb_to_ycbcr(const Image& rgb_img){
     const size_t num_pixels = rgb_img.width * rgb_img.height;
     ycbcr_img.y_data.resize(num_pixels);
     ycbcr_img.cb_data.resize(num_pixels);
-    ycbcr_img.cr_data.reserve(num_pixels);
+    ycbcr_img.cr_data.resize(num_pixels);
 
     for (size_t i=0; i < num_pixels; ++i){
        // std::cout << "i = " << i << std::endl;
@@ -83,32 +83,31 @@ Image read_ppm(const std::string& filename){
 }
 
 void perform_dct(Block& block){
-    const int N = 8;
     std::vector<double> temp(BLOCK_MATRIX_SIZE);
     //store the row results in this temp vector and then store the column results from the temp v
     //vector into the original block. Transforms the original block.
 
     // 1D DCT on rows
-    for (int i = 0; i < N; ++i){ // Process each row
-        for (int j = 0; j < N; ++j){ //j is the frequency coefficient
+    for (int i = 0; i < DCT_N; ++i){ // Process each row
+        for (int j = 0; j < DCT_N; ++j){ //j is the frequency coefficient
             double sum = 0.0;
-            for (int k = 0; k < N; ++k){ // Process each pixel
-                sum += block.data[i * N + k] * cos((2*k+1) * j * M_PI / (2.0 * N));
+            for (int k = 0; k < DCT_N; ++k){ // Process each pixel
+                sum += block.data[i * DCT_N + k] * cos((2*k+1) * j * M_PI / (2.0 * DCT_N));
             }
-            double c = (j==0) ? sqrt(1.0/N) : sqrt(2.0/N);
-            temp[i*N+j] = c * sum;
+            double c = (j==0) ? sqrt(1.0/DCT_N) : sqrt(2.0/DCT_N);
+            temp[i*DCT_N+j] = c * sum;
         }
     }
 
     // 1D DCT on columns
-    for (int j = 0; j < N; ++j){
-        for (int i = 0; i< N; ++i){
+    for (int j = 0; j < DCT_N; ++j){
+        for (int i = 0; i< DCT_N; ++i){
             double sum = 0.0;
-            for (int k = 0; k < N; ++k){
-                sum += temp[k*N+j] * cos((2*k+1) * i * M_PI / (2.0*N));
+            for (int k = 0; k < DCT_N; ++k){
+                sum += temp[k*DCT_N+j] * cos((2*k+1) * i * M_PI / (2.0*DCT_N));
             }
-            double c = (i==0) ? sqrt(1.0/N) : sqrt(2.0 / N);
-            block.data[i * N + j] = c * sum;
+            double c = (i==0) ? sqrt(1.0/DCT_N) : sqrt(2.0 / DCT_N);
+            block.data[i * DCT_N + j] = c * sum;
         }
     }
 }
@@ -124,7 +123,7 @@ void quantize_block(Block& block){
 std::vector<double> zig_zag_scan(Block& block){
     std::vector<double> scanned_vector(BLOCK_MATRIX_SIZE);
     for (int i = 0; i < BLOCK_MATRIX_SIZE; ++i){
-        scanned_vector[ZIG_ZAG_INDEX_ORDER[i]] = block.data[i];
+        scanned_vector[i] = block.data[ZIG_ZAG_INDEX_ORDER[i]];
     }
     return scanned_vector;
 }
@@ -153,7 +152,7 @@ int main(){
 
     // Visit each block
     for(int by = 0; by < height_in_blocks; ++by){
-        for (int bx = 0; bx < height_in_blocks; ++bx){
+        for (int bx = 0; bx < width_in_blocks; ++bx){
             Block current_block;
 
             // Visit each pixel in each block

@@ -21,3 +21,24 @@ const int ZIG_ZAG_INDEX_ORDER[BLOCK_MATRIX_SIZE]{
     21, 34, 37, 47, 50, 56, 59, 61,
     35, 36, 48, 49, 57, 58, 62, 63
 };
+
+static std::array<double, DCT_N> make_normal_factors(){
+    std::array<double, DCT_N> a{};
+    for(int i = 0; i < DCT_N; ++i){
+        a[i] = (i==0) ? sqrt(1.0/DCT_N) : sqrt(2.0/DCT_N);
+    }
+    return a;
+}
+
+static std::array<std::array<double, DCT_N>, DCT_N> make_cos_table(){
+    std::array<std::array<double, DCT_N>, DCT_N> t{};
+    for( int k = 0; k < DCT_N; ++k){
+        for (int n = 0; n < DCT_N; ++n){
+            t[k][n] = cos((2*n + 1) * k * M_PI / (2.0 * DCT_N));
+        }
+    }
+    return t;
+}
+
+const std::array<double, 8> NORMALIZATION_FACTORS = make_normal_factors();
+const std::array<std::array<double, 8>, 8> COSINE_TABLE = make_cos_table();
