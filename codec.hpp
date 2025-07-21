@@ -33,6 +33,11 @@ struct Block{
     Block() : data(BLOCK_MATRIX_SIZE, 0.0){}
 };
 
+struct MotionVector {
+    int x;
+    int y;
+};
+
 extern const int LUMINANCE_QUANT_TABLE[BLOCK_MATRIX_SIZE];
 extern const int ZIG_ZAG_INDEX_ORDER[BLOCK_MATRIX_SIZE];
 
