@@ -128,9 +128,7 @@ std::vector<double> zig_zag_scan(Block& block){
     return scanned_vector;
 }
 
-
-int main(){
-    const std::string input_filename = "input2.ppm";
+void intra_frame_code(const std::string& input_filename){
     Image rgb_image = read_ppm(input_filename);
     std::cout << "Encoder starting..." << std::endl;
     std::cout << "Successfully read image " << input_filename << std::endl;
@@ -211,5 +209,11 @@ int main(){
     std::cout << "Successfully wrote compressed data." << std::endl;
     std::cout << "File size: " << sizeof(ycbcr_image.width) + sizeof(ycbcr_image.height) + all_zig_zag_scans.size() * sizeof(short) << " bytes. " << std::endl;
     
+}
+
+
+int main(){
+    const std::string input_file_name = "input2.ppm";
+    intra_frame_code(input_file_name);
     return 0;
 }
