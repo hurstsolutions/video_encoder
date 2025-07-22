@@ -1,0 +1,12 @@
+Here are the updates I made to our project. Please evaluate them for correctness, performance, and adherence to common C++ standards. Remember, the goal is education - to learn video encoding and C++. Please be in depth in your explanations of why things don't work or should be changed.
+
+
+
+hpp & cpp - const vs static vs extern
+extern - defined somewhere else
+const - doesn't change - only make one copy and every file that calls it gets the same copy
+static - internal linkage - don't expose these to any other files
+
+
+
+As I said, one of my goals with this project is to become an expert C++ programmer. As we keep going, keep introducing

@@ -257,15 +257,15 @@ int main(){
         exit(1);
     }
     output_file.write(reinterpret_cast<char*>(&frame_2.width), sizeof(frame_2.width));
-    output_file.write(reinterpret_cast<char*>(&frame_2.width), sizeof(frame_2.width));
-    for(PFrameBlockData& p_frame : p_frame_blocks){
-        output_file.write(reinterpret_cast<char*>(&p_frame.motion_vector.x), sizeof(p_frame.motion_vector.x));
-        output_file.write(reinterpret_cast<char*>(&p_frame.motion_vector.y), sizeof(p_frame.motion_vector.y));
+    output_file.write(reinterpret_cast<char*>(&frame_2.height), sizeof(frame_2.height));
+    for(const PFrameBlockData& p_frame : p_frame_blocks){
+        output_file.write(reinterpret_cast<const char*>(&p_frame.motion_vector.x), sizeof(p_frame.motion_vector.x));
+        output_file.write(reinterpret_cast<const char*>(&p_frame.motion_vector.y), sizeof(p_frame.motion_vector.y));
         std::vector<short> short_coeffs(64);
         for(int i = 0; i < p_frame.comp_residual_coeffs.data.size(); ++i){
             short_coeffs[i] = static_cast<short>(p_frame.comp_residual_coeffs.data[i]);
         }
-        output_file.write(reinterpret_cast<char*>(&short_coeffs), short_coeffs.size() * sizeof(short));
+        output_file.write(reinterpret_cast<const char*>(short_coeffs.data()), short_coeffs.size() * sizeof(short));
     }
     output_file.close();
 
