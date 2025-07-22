@@ -54,3 +54,5 @@ extern const std::array<std::array<double, 8>, 8> COSINE_TABLE;
 
 extern Image read_ppm(const std::string& filename);
 extern YCbCrImage rgb_to_ycbcr(const Image& rgb_img);
+extern Block get_block_from_frame(const YCbCrImage& frame, int top_left_pixel_x, int top_left_pixel_y);
+extern Block get_predicted_block(const YCbCrImage& reference_frame, int current_pixel_x, int current_pixel_y, const MotionVector& motion_vector);

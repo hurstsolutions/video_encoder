@@ -112,3 +112,29 @@ YCbCrImage rgb_to_ycbcr(const Image& rgb_img){
     
     return ycbcr_img;
 }
+
+Block get_block_from_frame(const YCbCrImage& frame, int top_left_pixel_x, int top_left_pixel_y){
+    Block block;
+    for(int y = 0; y < BLOCK_SIZE; ++y){
+        for (int x = 0; x < BLOCK_SIZE; ++x){
+            int pixel_x = top_left_pixel_x + x;
+            int pixel_y = top_left_pixel_y + y;
+            int pixel_index = pixel_y * frame.width + pixel_x;
+            if(pixel_index >= 0 && pixel_index < frame.y_data.size()){
+                block.data[y*BLOCK_SIZE+x] = static_cast<double>(frame.y_data[pixel_index]);
+            }
+        }
+    }
+    return block;
+}
+
+
+Block get_predicted_block(const YCbCrImage& reference_frame, int current_pixel_x, int current_pixel_y, const MotionVector& motion_vector){
+    int new_y = current_pixel_y + motion_vector.y;
+    int new_x = current_pixel_x + motion_vector.x;
+    
+    Block predicted_block = get_block_from_frame(reference_frame, new_x, new_y);
+    
+    return predicted_block;
+    
+}
