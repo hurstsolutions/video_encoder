@@ -12,76 +12,6 @@
 
 
 
-YCbCrImage rgb_to_ycbcr(const Image& rgb_img){
-    YCbCrImage ycbcr_img;
-    ycbcr_img.width = rgb_img.width;
-    ycbcr_img.height = rgb_img.height;
-
-    const size_t num_pixels = rgb_img.width * rgb_img.height;
-    ycbcr_img.y_data.resize(num_pixels);
-    ycbcr_img.cb_data.resize(num_pixels);
-    ycbcr_img.cr_data.resize(num_pixels);
-
-    for (size_t i=0; i < num_pixels; ++i){
-       // std::cout << "i = " << i << std::endl;
-        double r = rgb_img.data[i * 3 + 0];
-        double g = rgb_img.data[i * 3 + 1];
-        double b = rgb_img.data[i * 3 + 2];
-
-        //Convert to YCbCr
-        double y = 0.299 * r + 0.587 * g + 0.114 * b;
-        double cb = -0.168736 * r - 0.331264 * g + 0.5 * b + 128;
-        double cr = 0.5 * r - 0.418688 * g - 0.081312 * b + 128;
-
-        //std::cout << "<R G B> <" << r << " " << g << " " << b << ">" << std::endl;
-        //std::cout << "<Y Cb Cr> <" << y << " " << cb << " " << cr << ">" << std::endl; 
-
-        ycbcr_img.y_data[i] = static_cast<unsigned char>(std::max(0.0, std::min(255.0, y)));
-        ycbcr_img.cb_data[i] = static_cast<unsigned char>(std::max(0.0, std::min(255.0, cb)));
-        ycbcr_img.cr_data[i] = static_cast<unsigned char>(std::max(0.0, std::min(255.0, cr)));
-    } 
-    
-    return ycbcr_img;
-}
-
-Image read_ppm(const std::string& filename){
-    std::ifstream file(filename, std::ios::binary);
-    if (!file.is_open()){
-        std::cerr << "Error could not open file " << filename << std::endl;
-        exit(1);
-    }
-
-    std::string magic_number;
-    file >> magic_number;
-    if (magic_number != "P6"){
-        std::cerr << "Error: not a P6 PPM file." << std::endl;
-        exit(1);
-    }
-
-    Image img;
-    int max_value;
-    file >> img.width >> img.height >> max_value;
-    std::cout << "Width - " << img.width << std::endl;
-    std::cout << "Height - " << img.height << std::endl;
-    file.ignore(1, '\n');
-
-    // total size of image, because there are three bytes per pixel(RGB)
-    const size_t data_size = img.width * img.height * 3;
-
-    std::cout << "Data Size - " << data_size << std::endl;
-    img.data.resize(data_size);
-
-    file.read(reinterpret_cast<char*>(img.data.data()), data_size);
-
-    if(!file){
-        std::cerr << "Error - failed to read pixel data from " << filename << std::endl;
-        exit(1);
-    }
-    file.close();
-
-    return img;
-}
-
 void perform_dct(Block& block){
     std::vector<double> temp(BLOCK_MATRIX_SIZE);
     //store the row results in this temp vector and then store the column results from the temp v
@@ -345,7 +275,26 @@ int main(){
     }
     std::cout << std::endl;
 
+    std::ofstream output_file ("output_frame.bin", std::ios::binary);
+    if(!output_file.is_open()){
+        std::cerr << "Error - could not open output file." << std::endl;
+        exit(1);
+    }
+    output_file.write(reinterpret_cast<char*>(&frame_2.width), sizeof(frame_2.width));
+    output_file.write(reinterpret_cast<char*>(&frame_2.width), sizeof(frame_2.width));
+    for(PFrameBlockData& p_frame : p_frame_blocks){
+        output_file.write(reinterpret_cast<char*>(&p_frame.motion_vector.x), sizeof(p_frame.motion_vector.x));
+        output_file.write(reinterpret_cast<char*>(&p_frame.motion_vector.y), sizeof(p_frame.motion_vector.y));
+        std::vector<short> short_coeffs(64);
+        for(int i = 0; i < p_frame.comp_residual_coeffs.data.size(); ++i){
+            short_coeffs[i] = static_cast<short>(p_frame.comp_residual_coeffs.data[i]);
+        }
+        output_file.write(reinterpret_cast<char*>(&short_coeffs), short_coeffs.size() * sizeof(short));
+    }
+    output_file.close();
 
+    std::cout << "Successfully wrote p-frame data." << std::endl;
+    
 
 
     return 0;

@@ -4,6 +4,8 @@
 #include <vector>
 #include <array>
 #include <cmath>
+#include <fstream>
+#include <iostream>
 
 constexpr int BLOCK_MATRIX_SIZE = 64;
 constexpr int DCT_N = 8;
@@ -49,3 +51,6 @@ extern const int ZIG_ZAG_INDEX_ORDER[BLOCK_MATRIX_SIZE];
 
 extern const std::array<double, 8> NORMALIZATION_FACTORS;
 extern const std::array<std::array<double, 8>, 8> COSINE_TABLE;
+
+extern Image read_ppm(const std::string& filename);
+extern YCbCrImage rgb_to_ycbcr(const Image& rgb_img);
