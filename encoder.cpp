@@ -140,9 +140,8 @@ void intra_frame_code(const std::string& input_filename){
     std::cout << "Size of Luma (y) data: " << ycbcr_image.y_data.size() << " bytes." << std::endl;
     
     
-    const int block_size = 8;
-    int width_in_blocks = ycbcr_image.width / block_size;
-    int height_in_blocks = ycbcr_image.height / block_size;
+    int width_in_blocks = ycbcr_image.width / BLOCK_SIZE;
+    int height_in_blocks = ycbcr_image.height / BLOCK_SIZE;
 
     std::vector<Block> y_dct_blocks;
 
@@ -154,13 +153,13 @@ void intra_frame_code(const std::string& input_filename){
             Block current_block;
 
             // Visit each pixel in each block
-            for(int y = 0; y < block_size; ++y){
-                for (int x = 0; x < block_size; ++x){
-                    int pixel_x = bx * block_size + x;
-                    int pixel_y = by * block_size + y;
+            for(int y = 0; y < BLOCK_SIZE; ++y){
+                for (int x = 0; x < BLOCK_SIZE; ++x){
+                    int pixel_x = bx * BLOCK_SIZE + x;
+                    int pixel_y = by * BLOCK_SIZE + y;
                     int pixel_index = pixel_y * ycbcr_image.width + pixel_x;
 
-                    current_block.data[y*block_size+x] = static_cast<double>(ycbcr_image.y_data[pixel_index]) - 128.0;
+                    current_block.data[y*BLOCK_SIZE+x] = static_cast<double>(ycbcr_image.y_data[pixel_index]) - 128.0;
                 }
             }
 
@@ -174,9 +173,9 @@ void intra_frame_code(const std::string& input_filename){
 
     if(!y_dct_blocks.empty()){
         std::cout << "First 8x8 Y DCT blocks - Quantized:" << std::endl;
-        for(int y = 0; y < block_size; ++y){
-            for(int x = 0; x < block_size; ++x){
-                std::cout << std::setw(8) << static_cast<int>(y_dct_blocks[0].data[y * block_size + x]);
+        for(int y = 0; y < BLOCK_SIZE; ++y){
+            for(int x = 0; x < BLOCK_SIZE; ++x){
+                std::cout << std::setw(8) << static_cast<int>(y_dct_blocks[0].data[y * BLOCK_SIZE + x]);
             }
             std::cout << std::endl;
         }
@@ -211,11 +210,11 @@ void intra_frame_code(const std::string& input_filename){
     
 }
 
-int SAD_score(const YCbCrImage& reference_image, const YCbCrImage& current_image, int ref_x, int ref_y, int cur_x, int cur_y, size_t block_size){
+int SAD_score(const YCbCrImage& reference_image, const YCbCrImage& current_image, int ref_x, int ref_y, int cur_x, int cur_y){
     int sum = 0;
     int width = reference_image.width;
-    for(int x = 0; x < block_size; ++x){
-        for(int y = 0; y < block_size; ++y){
+    for(int x = 0; x < BLOCK_SIZE; ++x){
+        for(int y = 0; y < BLOCK_SIZE; ++y){
             int reference_pixel_index = (y + ref_y) * width + (x + ref_x);
             int current_pixel_index = (y + cur_y) * width + (x + cur_x);
             sum += std::abs(current_image.y_data[current_pixel_index] - reference_image.y_data[reference_pixel_index]); 
@@ -224,26 +223,26 @@ int SAD_score(const YCbCrImage& reference_image, const YCbCrImage& current_image
     return sum;
 }
 
-MotionVector find_best_match(int block_x, int block_y, int search_area, size_t block_size, const YCbCrImage& current_frame, const YCbCrImage& reference_frame){
+MotionVector find_best_match(int block_x, int block_y, int search_area, const YCbCrImage& current_frame, const YCbCrImage& reference_frame){
     MotionVector current_best_match{0, 0};
     int current_sad_score = INT_MAX;
     // Convert the indicies of the blocks we got in to pixel cooridinates
-    const int pixel_x = block_x * block_size;
-    const int pixel_y = block_y * block_size;
+    const int pixel_x = block_x * BLOCK_SIZE;
+    const int pixel_y = block_y * BLOCK_SIZE;
 
     for(int search_x = -search_area; search_x <= search_area; ++search_x){
         //Out of bounds check
         const int reference_block_x = pixel_x + search_x;
-        if(reference_block_x < 0 || reference_block_x + block_size > current_frame.width || reference_block_x + block_size > reference_frame.width){
+        if(reference_block_x < 0 || reference_block_x + BLOCK_SIZE > current_frame.width || reference_block_x + BLOCK_SIZE > reference_frame.width){
             continue;
         }
         for(int search_y = search_area; search_y <= search_area; ++search_y){
             //Out of bounds check
             const int reference_block_y = pixel_y + search_y;
-            if(reference_block_y < 0 || reference_block_y + block_size > current_frame.height || reference_block_y + block_size > reference_frame.height){
+            if(reference_block_y < 0 || reference_block_y + BLOCK_SIZE > current_frame.height || reference_block_y + BLOCK_SIZE > reference_frame.height){
                 continue;
             }
-            int sad_score = SAD_score(reference_frame, current_frame, reference_block_x, reference_block_y, pixel_x, pixel_y, block_size);
+            int sad_score = SAD_score(reference_frame, current_frame, reference_block_x, reference_block_y, pixel_x, pixel_y);
             if (sad_score < current_sad_score){
                 current_sad_score = sad_score;
                 current_best_match.x = reference_block_x;
@@ -253,6 +252,43 @@ MotionVector find_best_match(int block_x, int block_y, int search_area, size_t b
     }
     return current_best_match;
 }
+
+
+Block get_block_from_frame(const YCbCrImage& frame, int top_left_pixel_x, int top_left_pixel_y){
+    Block block;
+    for(int y = 0; y < BLOCK_SIZE; ++y){
+        for (int x = 0; x < BLOCK_SIZE; ++x){
+            int pixel_x = top_left_pixel_x + x;
+            int pixel_y = top_left_pixel_y + y;
+            int pixel_index = pixel_y * frame.width + pixel_x;
+            if(pixel_index >= 0 && pixel_index < frame.y_data.size()){
+                block.data[y*BLOCK_SIZE+x] = static_cast<double>(frame.y_data[pixel_index]);
+            }
+        }
+    }
+    return block;
+}
+
+
+Block get_predicted_block(const YCbCrImage& reference_frame, int current_pixel_x, int current_pixel_y, const MotionVector& motion_vector){
+    int new_y = current_pixel_y + motion_vector.y;
+    int new_x = current_pixel_x + motion_vector.x;
+    
+    Block predicted_block = get_block_from_frame(reference_frame, new_x, new_y);
+    
+    return predicted_block;
+    
+}
+
+Block create_residual_block(const Block& current_block, const Block& predicted_block){
+    Block residual_block;
+    for(int i = 0; i < BLOCK_MATRIX_SIZE; ++i){
+        residual_block.data[i] = current_block.data[i] - predicted_block.data[i];
+    }
+    return residual_block;
+}
+
+
 
 int main(){
     // Intra Frame Coder
@@ -269,28 +305,45 @@ int main(){
     YCbCrImage frame_1 = rgb_to_ycbcr(frame_1_image);
     YCbCrImage frame_2 = rgb_to_ycbcr(frame_2_image);
 
-    const int block_size = 8;
     const int search_area = 16;
-    int width_in_blocks = frame_2.width / block_size;
-    int height_in_blocks = frame_2.height / block_size;
+    int width_in_blocks = frame_2.width / BLOCK_SIZE;
+    int height_in_blocks = frame_2.height / BLOCK_SIZE;
 
-    std::vector<MotionVector> motion_vectors;
+    // std::vector<MotionVector> motion_vectors;
+    std::vector<PFrameBlockData> p_frame_blocks;
     for (int block_y = 0; block_y < height_in_blocks; ++block_y){
         for(int block_x = 0; block_x < width_in_blocks; ++block_x){
-            MotionVector best_match = find_best_match(block_x, block_y, search_area, block_size, frame_2, frame_1);
-            motion_vectors.push_back(best_match);
+            int pixel_x_of_actual_block = block_x * BLOCK_SIZE;
+            int pixel_y_of_actual_block = block_y * BLOCK_SIZE; 
+            Block actual_block = get_block_from_frame(frame_2, pixel_x_of_actual_block, pixel_y_of_actual_block);
+            MotionVector best_match = find_best_match(block_x, block_y, search_area, frame_2, frame_1);
+            // motion_vectors.push_back(best_match);
+
+            Block predicted_block = get_predicted_block(frame_1, pixel_x_of_actual_block, pixel_y_of_actual_block, best_match); 
+            Block residual_block = create_residual_block(actual_block, predicted_block);
+            perform_dct(residual_block);
+            quantize_block(residual_block);
+            p_frame_blocks.push_back({best_match, residual_block});
         }
     }
 
     // Print some motion vectors to check work;
-    std::cout << "Printing first 24 motion vectors." << std::endl;
+    // std::cout << "Printing first 24 motion vectors." << std::endl;
 
-    for(int i = 0; i < 24; ++i){
-        std::cout << std::setw(8) << "(" << motion_vectors[i].x << ", " << motion_vectors[i].y <<")";
-        if(!(i % 8) && i){
-            std::cout << std::endl;
-        }
+    // for(int i = 0; i < 24; ++i){
+    //     std::cout << std::setw(8) << "(" << motion_vectors[i].x << ", " << motion_vectors[i].y <<")";
+    //     if(!(i % 8) && i){
+    //         std::cout << std::endl;
+    //     }
+    // }
+    
+    //Verification of Motion Compensation and residual building.
+    std::cout << "First Block's motion vector - (" << p_frame_blocks[0].motion_vector.x << ", " << p_frame_blocks[0].motion_vector.y << ")" << std::endl;
+    std::cout << "First 8 Quantized Coefficients: " << std::endl;
+    for (int i = 0; i < 8; ++i){
+        std::cout << std::setw(8) << p_frame_blocks[0].comp_residual_coeffs.data[i];
     }
+    std::cout << std::endl;
 
 
 

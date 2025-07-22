@@ -7,6 +7,7 @@
 
 constexpr int BLOCK_MATRIX_SIZE = 64;
 constexpr int DCT_N = 8;
+constexpr int BLOCK_SIZE = 8;
 
 struct Image {
     int width;
@@ -36,6 +37,11 @@ struct Block{
 struct MotionVector {
     int x;
     int y;
+};
+
+struct PFrameBlockData{
+    MotionVector motion_vector;
+    Block comp_residual_coeffs;
 };
 
 extern const int LUMINANCE_QUANT_TABLE[BLOCK_MATRIX_SIZE];
