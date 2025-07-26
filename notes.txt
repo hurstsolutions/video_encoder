@@ -9,4 +9,4 @@ static - internal linkage - don't expose these to any other files
 
 
 
-As I said, one of my goals with this project is to become an expert C++ programmer. As we keep going, keep introducing
+As we keep going, keep introducing new C++ concepts as the scope of the project permits.

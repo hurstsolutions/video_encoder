@@ -167,7 +167,7 @@ void intra_frame_decoder(const std::string& output_filename){
         }
     }
 
-    write_ppm("output.ppm", encoded_width, encoded_height, final_image.data);
+    write_ppm(".\\Images\\output.ppm", encoded_width, encoded_height, final_image.data);
 }
 
 void add_blocks(Block& destination, Block& block_1, Block& block_2){
@@ -183,12 +183,12 @@ void add_blocks(Block& destination, Block& block_1, Block& block_2){
 }
 
 int main(){
-    const std::string input_file_1 = "input_frame_001.ppm";
+    const std::string input_file_1 = ".\\Images\\input_frame_001.ppm";
     Image frame_1_image = read_ppm(input_file_1);
     YCbCrImage reference_frame = rgb_to_ycbcr(frame_1_image);
     std::cout << "Loaded Reference Frame." << std::endl;
 
-    const std::string binary_file_name = "output_frame.bin";
+    const std::string binary_file_name = ".\\Images\\output_frame.bin";
     std::ifstream binary_file(binary_file_name, std::ios::binary);
     if(!binary_file.is_open()){
         std::cerr << "Error - could not open file. " << std::endl;
@@ -265,7 +265,7 @@ int main(){
         }
     }
 
-    write_ppm("output_frame2.ppm", final_image.width, final_image.height, final_image.data);
+    write_ppm(".\\Images\\output_frame2.ppm", final_image.width, final_image.height, final_image.data);
 
     
 

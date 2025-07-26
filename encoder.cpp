@@ -198,12 +198,12 @@ Block create_residual_block(const Block& current_block, const Block& predicted_b
 
 int main(){
     // Intra Frame Coder
-    // const std::string input_file_name = "input2.ppm";
+    // const std::string input_file_name = ".\\Images\\input2.ppm";
     // intra_frame_code(input_file_name);
 
     //Inter Frame Coder
-    const std::string input_file_1 = "input_frame_001.ppm";
-    const std::string input_file_2 = "input_frame_002.ppm";
+    const std::string input_file_1 = ".\\Images\\input_frame_001.ppm";
+    const std::string input_file_2 = ".\\Images\\input_frame_002.ppm";
 
     Image frame_1_image = read_ppm(input_file_1);
     Image frame_2_image = read_ppm(input_file_2);
@@ -251,7 +251,7 @@ int main(){
     }
     std::cout << std::endl;
 
-    std::ofstream output_file ("output_frame.bin", std::ios::binary);
+    std::ofstream output_file (".\\Images\\output_frame.bin", std::ios::binary);
     if(!output_file.is_open()){
         std::cerr << "Error - could not open output file." << std::endl;
         exit(1);
